@@ -1,5 +1,5 @@
 """
-scripts/check_supabase_rls.py — Project ARJUNA (SIH 26170)
+
 Opt-in live verification of Supabase RLS behavior (SECURITY_REMEDIATION.md §3).
 
 Runs ONLY when SUPABASE_URL and SUPABASE_KEY are present in the environment
