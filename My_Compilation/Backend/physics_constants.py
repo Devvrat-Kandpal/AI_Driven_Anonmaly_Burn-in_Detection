@@ -1,4 +1,4 @@
-"""Backend/physics_constants.py -- Project ARJUNA (SIH 26170)
+"""Backend/physics_constants.py 
 
 Single authoritative source of truth for ALL physical constants and unit conventions.
 
