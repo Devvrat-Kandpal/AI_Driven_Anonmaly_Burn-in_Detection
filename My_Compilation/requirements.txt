@@ -1,4 +1,4 @@
-﻿# Project ARJUNA (SIH 26170) -- PINNED, reproducible runtime (audit P1-14).
+﻿
 # These EXACT versions are canonical: local, CI, Docker, model training,
 # and model inference must all use the same set to guarantee serialized
 # scikit-learn model compatibility (P-07). scipy is a direct import in
