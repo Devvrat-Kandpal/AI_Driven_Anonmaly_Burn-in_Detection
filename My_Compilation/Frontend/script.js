@@ -1,6 +1,5 @@
 /**
  * Project Arjuna (SIH 26170): ISRO Aerospace Burn-In Mission Control Engine
- * Author: Member 1 (Frontend Developer & UI/UX Lead)
  * 
  * Specifically addresses ISRO Evaluation Metrics:
  * - Module A: Dynamic Outlier Detection (Lot Mean 10 uA vs Part 45 uA vs 50 uA Max)
