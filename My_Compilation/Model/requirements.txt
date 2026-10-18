@@ -1,4 +1,4 @@
-# Project ARJUNA (SIH 26170) — Model training/inference runtime (PINNED).
+
 # MUST match the root requirements.txt so the serialized Isolation Forest model
 # (Model/isolation_forest_model.joblib) is reproducible across local/CI/Docker.
 scikit-learn==1.9.0
