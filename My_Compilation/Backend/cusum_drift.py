@@ -1,6 +1,5 @@
 """
-cusum_drift.py — Project ARJUNA (SIH 26170): Time-Series CUSUM Drift Detector
-Author: Member 4 (Time-Series AI Specialist)
+
 
 Implements the Tabular Cumulative Sum (CUSUM) statistical quality control algorithm
 for detecting slow, latent thermal and parametric creep in (simulated) electronics
@@ -221,9 +220,6 @@ class DriftDetector:
 if __name__ == "__main__":
     import random
 
-    print("==========================================================================")
-    print("  PROJECT ARJUNA (SIH 26170): CUSUM DRIFT DETECTOR STANDALONE DEMO")
-    print("==========================================================================")
 
     for level in [1, 2, 3]:
         print(f"\n--- Criticality Level {level} ---")
