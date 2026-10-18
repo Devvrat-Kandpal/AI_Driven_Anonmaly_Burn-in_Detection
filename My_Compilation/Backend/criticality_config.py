@@ -1,5 +1,5 @@
 """
-Backend/criticality_config.py — Project ARJUNA (SIH 26170)
+Backend/criticality_config.py 
 Centralized mission-criticality-weighted threshold configuration.
 
 Convention:
