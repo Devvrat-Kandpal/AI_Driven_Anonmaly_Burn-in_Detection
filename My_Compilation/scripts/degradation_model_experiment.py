@@ -1,8 +1,6 @@
-"""scripts/degradation_model_experiment.py — Project ARJUNA (SIH 26170)
+"""scripts/degradation_model_experiment.py
 
-Phase 3.3 bounded experiment (master-prompt §24): compare the DEFAULT linear
-degradation surrogate (Model A) against the DISABLED accumulated-Arrhenius
-candidate (Model B) over a 168 h drift trajectory.
+
 
 MEASURE-ONLY. The model switch is patched in-memory on Backend.simulator and
 restored in a finally block; the on-disk default in physics_constants.py is
