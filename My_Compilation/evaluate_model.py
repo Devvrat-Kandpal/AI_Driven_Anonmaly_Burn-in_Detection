@@ -1,5 +1,5 @@
 """
-evaluate_model.py — Project ARJUNA (SIH 26170)
+
 Quantitative Aerospace Benchmark & Multi-Model Ablation Engine.
 Evaluates:
   1. Unseen randomized fault datasets (Precision, Recall, F1, Confusion Matrix, Latency)
