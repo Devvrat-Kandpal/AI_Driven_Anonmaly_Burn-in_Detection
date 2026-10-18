@@ -1,7 +1,4 @@
-﻿==========================================================================
-  PROJECT ARJUNA (SIH 26170): COMPREHENSIVE AEROSPACE BENCHMARK SUITE    
-  Designed with reference to ECSS-Q-ST-60-02C principles & MIL-STD-883 screening horizon        
-==========================================================================
+
 
 [Phase 1/5] Benchmarking Unseen Randomized Fault Datasets (Defect Recall)...
   -> Total Samples Evaluated: 7,500
