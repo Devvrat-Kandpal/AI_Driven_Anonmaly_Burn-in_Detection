@@ -1,5 +1,5 @@
 """
-Backend/security.py — Project ARJUNA (SIH 26170)
+Backend/security.py — 
 API authentication, Role-Based Access Control (RBAC), sliding-window rate limiting,
 WebSocket handshake security, and restricted CORS middleware conforming to aerospace software assurance guidelines.
 """
