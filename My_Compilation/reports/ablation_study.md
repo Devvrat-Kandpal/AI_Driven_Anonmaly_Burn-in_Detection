@@ -1,4 +1,4 @@
-# Project ARJUNA: Quantitative Aerospace Evaluation Report
+# Quantitative Aerospace Evaluation Report
 **Reference Framework:** Designed with reference to ECSS-Q-ST-60-02C-era Space Product Assurance principles | MIL-STD-883 168h/125°C screening horizon (project-selected scenario, not a formal certification)
 
 ## 1. Unseen Randomized Fault Benchmark Metrics
