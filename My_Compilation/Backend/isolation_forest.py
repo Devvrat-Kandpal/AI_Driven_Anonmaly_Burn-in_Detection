@@ -32,7 +32,7 @@ except ImportError:
 # ===========================================================================
 class LinearRegressionDriftPredictor:
     """
-    Project Arjuna (SIH 26170): MODULE B — Latent Drift Predictor.
+  
 
     Maintains a rolling window of Iddq observations tagged with BURN-IN HOURS
     (0h, 24h, 96h, 168h) and uses Ordinary Least Squares linear regression to
@@ -210,8 +210,6 @@ class LinearRegressionDriftPredictor:
 
 class MultivariateAnomalyDetector:
     """
-    Project Arjuna (SIH 26170): ISRO AI-Driven Anomaly Detection & Dynamic Outlier Engine
-    conforming to space product assurance standard ECSS-Q-ST-60-02C.
 
     MODULE A: Dynamic Outlier Detection & Multivariate Screening
     - Evaluates multidimensional parametric correlations (Voltage, Current, Temperature,
