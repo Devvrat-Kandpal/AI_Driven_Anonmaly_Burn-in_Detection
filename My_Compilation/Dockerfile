@@ -1,9 +1,4 @@
-# ==============================================================================
-# PROJECT ARJUNA (SIH 26170): MULTI-STAGE DOCKERFILE
-# Containerized demonstration / prototype deployment environment.
-# (Not a "production aerospace container" — real-hardware and formal ECSS
-#  qualification remain out of scope for this prototype; see P2-01 / docs.)
-# ==============================================================================
+
 
 # Stage 1: Build stage for dependency resolution
 FROM python:3.11-slim AS builder
