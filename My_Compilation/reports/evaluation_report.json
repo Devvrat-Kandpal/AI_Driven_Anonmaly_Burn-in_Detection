@@ -1,0 +1,345 @@
+{
+  "timestamp": "2026-09-09T13:19:05Z",
+  "standard": "Designed with reference to ECSS-Q-ST-60-02C principles & MIL-STD-883 screening horizon",
+  "unseen_fault_benchmark": {
+    "total_samples": 7500,
+    "true_positives": 2456,
+    "false_positives": 179,
+    "true_negatives": 4865,
+    "false_negatives": 0,
+    "precision": 0.9321,
+    "recall": 1.0,
+    "f1_score": 0.9648,
+    "roc_auc": 0.9985,
+    "false_negative_rate": 0.0,
+    "false_positive_rate": 0.03549,
+    "avg_inference_latency_ms": 3.6561,
+    "p99_inference_latency_ms": 8.0938,
+    "segment_metrics": {
+      "nominal_false_positive_rate": 0.0328,
+      "instantaneous_outlier_recall": 1.0,
+      "creep_recall": 1.0,
+      "short_recall": 1.0,
+      "creep_detection_latency_ticks_mean": 103.9,
+      "creep_detection_latency_ticks_max": 199
+    }
+  },
+  "drift_168h_ground_truth_benchmark": {
+    "mean_absolute_error_uA": 0.567,
+    "root_mean_squared_error_uA": 0.803,
+    "mean_absolute_percentage_error": 3.36,
+    "mean_error_bias_uA": -0.482,
+    "error_std_dev_uA": 0.643,
+    "prediction_interval_95_uA": [
+      -1.742,
+      0.778
+    ],
+    "error_by_severity": {
+      "minor_stable_drift_mae_uA": 0.396,
+      "moderate_creep_mae_uA": 1.05,
+      "critical_breach_mae_uA": 0.342
+    },
+    "average_early_rejection_lead_time_hours": 165.6,
+    "chamber_time_saved_percent": 98.6
+  },
+  "drift_168h_honest_vs_real_trajectory": {
+    "trajectory_source": "sample_data_168h.csv",
+    "true_endpoint_burn_in_h": 168.0,
+    "true_endpoint_iddq_uA": 150.0,
+    "observation_windows": [
+      {
+        "observation_window_h": 12.0,
+        "observations_used": 13,
+        "forecast_168h_uA": 106.31,
+        "true_endpoint_uA": 150.0,
+        "signed_error_uA": -43.69,
+        "abs_error_uA": 43.69
+      },
+      {
+        "observation_window_h": 24.0,
+        "observations_used": 25,
+        "forecast_168h_uA": 105.9,
+        "true_endpoint_uA": 150.0,
+        "signed_error_uA": -44.1,
+        "abs_error_uA": 44.1
+      },
+      {
+        "observation_window_h": 48.0,
+        "observations_used": 49,
+        "forecast_168h_uA": 114.05,
+        "true_endpoint_uA": 150.0,
+        "signed_error_uA": -35.95,
+        "abs_error_uA": 35.95
+      },
+      {
+        "observation_window_h": 96.0,
+        "observations_used": 97,
+        "forecast_168h_uA": 134.34,
+        "true_endpoint_uA": 150.0,
+        "signed_error_uA": -15.66,
+        "abs_error_uA": 15.66
+      },
+      {
+        "observation_window_h": 120.0,
+        "observations_used": 121,
+        "forecast_168h_uA": 145.02,
+        "true_endpoint_uA": 150.0,
+        "signed_error_uA": -4.98,
+        "abs_error_uA": 4.98
+      },
+      {
+        "observation_window_h": 144.0,
+        "observations_used": 145,
+        "forecast_168h_uA": 156.0,
+        "true_endpoint_uA": 150.0,
+        "signed_error_uA": 6.0,
+        "abs_error_uA": 6.0
+      }
+    ],
+    "overall_mae_uA": 25.062,
+    "overall_rmse_uA": 30.143,
+    "note": "HONEST, non-circular score: Module B (OLS linear extrapolator) is scored against the REAL coupled physics trajectory (thermal-ratio amplification + 150 uA Iddq clamp). The legacy synthetic benchmark shares its linear generator with Module B and is retained only for historical comparison. Single-DUT trajectory => per-window statistics, not a large population."
+  },
+  "ablation_study": {
+    "isolation_forest_only": {
+      "catches_instant_spike": true,
+      "catches_slow_thermal_creep": false,
+      "catches_catastrophic_short": true,
+      "false_alarm_count_1000_nominal": 0,
+      "summary": "Effective for high-dimensional shorts, but completely misses slow gradual thermal degradation early on."
+    },
+    "cusum_only": {
+      "catches_instant_spike": true,
+      "catches_slow_thermal_creep": true,
+      "creep_detection_latency_steps": 11,
+      "catches_catastrophic_short": true,
+      "summary": "Superb for cumulative creep detection, but lacks multi-dimensional voltage/current correlation capability."
+    },
+    "combined_system": {
+      "catches_instant_spike": true,
+      "catches_slow_thermal_creep": true,
+      "catches_catastrophic_short": true,
+      "false_alarm_count_1000_nominal": 0,
+      "summary": "100% recall across both instantaneous multivariate collapses and latent time-series creep."
+    },
+    "criticality_levels_comparison": {
+      "level_1": {
+        "tier": "LOW-CRITICALITY",
+        "cusum_threshold": 7.0,
+        "if_score_gate": 0.65,
+        "creep_detection_step": 12
+      },
+      "level_2": {
+        "tier": "STANDARD",
+        "cusum_threshold": 5.0,
+        "if_score_gate": 0.55,
+        "creep_detection_step": 11
+      },
+      "level_3": {
+        "tier": "MISSION-CRITICAL",
+        "cusum_threshold": 3.5,
+        "if_score_gate": 0.45,
+        "creep_detection_step": 9
+      }
+    }
+  },
+  "ood_generalization_benchmark": {
+    "regimes": {
+      "power_law": {
+        "physical_analogy": "Sub-linear aging kinetics (t^0.35) - analogous to NBTI/EM-style saturating drift",
+        "n_components": 60,
+        "regime_type": "nonlinear",
+        "ols_mae_168h_uA": 1.392,
+        "ols_rmse_168h_uA": 1.396,
+        "ols_mean_bias_uA": -1.392,
+        "cusum_detection_rate": 1.0,
+        "cusum_avg_detection_hour": 8.5
+      },
+      "exponential": {
+        "physical_analogy": "Accelerating degradation (exp(k*t)) - analogous to self-heated runaway",
+        "n_components": 60,
+        "regime_type": "nonlinear",
+        "ols_mae_168h_uA": 5.758,
+        "ols_rmse_168h_uA": 5.761,
+        "ols_mean_bias_uA": -5.758,
+        "cusum_detection_rate": 0.4167,
+        "cusum_avg_detection_hour": 18.0
+      },
+      "logarithmic": {
+        "physical_analogy": "Decelerating / self-limiting growth (ln(1+0.1t)) - analogous to passive film growth",
+        "n_components": 60,
+        "regime_type": "nonlinear",
+        "ols_mae_168h_uA": 4.545,
+        "ols_rmse_168h_uA": 4.546,
+        "ols_mean_bias_uA": -4.545,
+        "cusum_detection_rate": 1.0,
+        "cusum_avg_detection_hour": 6.0
+      },
+      "piecewise": {
+        "physical_analogy": "Abrupt stress escalation at t=80h (stepped slope) - analogous to load-step or bias-stress change",
+        "n_components": 60,
+        "regime_type": "nonlinear",
+        "ols_mae_168h_uA": 9.354,
+        "ols_rmse_168h_uA": 9.354,
+        "ols_mean_bias_uA": -9.354,
+        "cusum_detection_rate": 0.0333,
+        "cusum_avg_detection_hour": 20.0
+      }
+    },
+    "note": "Module B is an OLS linear extrapolator: higher MAE on nonlinear regimes is expected and honest. Module C CUSUM makes no linearity assumption and should retain high detection of persistent creep. These regimes are independent ground truth (unlike the in-domain benchmark, which shares its linear generator with the model).",
+    "parameter_shifted_lot": {
+      "lot_mean_iddq_uA": 14.0,
+      "lot_std_iddq_uA": 2.5,
+      "n_samples": 300,
+      "module_a_anomaly_rate": 0.5467,
+      "regime_type": "out_of_distribution_parameter_shift"
+    }
+  },
+  "threshold_sensitivity": {
+    "thresholds": [
+      {
+        "z_sigma_threshold": 2.0,
+        "true_positives": 410,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 90,
+        "precision": 1.0,
+        "recall": 0.82,
+        "f1_score": 0.9011,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.18,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.7,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 180.0
+      },
+      {
+        "z_sigma_threshold": 2.5,
+        "true_positives": 335,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 165,
+        "precision": 1.0,
+        "recall": 0.67,
+        "f1_score": 0.8024,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.33,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.45,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 330.0
+      },
+      {
+        "z_sigma_threshold": 3.0,
+        "true_positives": 276,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 224,
+        "precision": 1.0,
+        "recall": 0.552,
+        "f1_score": 0.7113,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.448,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.2533,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 448.0
+      },
+      {
+        "z_sigma_threshold": 3.5,
+        "true_positives": 211,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 289,
+        "precision": 1.0,
+        "recall": 0.422,
+        "f1_score": 0.5935,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.578,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.0367,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 578.0
+      },
+      {
+        "z_sigma_threshold": 4.0,
+        "true_positives": 200,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 300,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1_score": 0.5714,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.6,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.0,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 600.0
+      },
+      {
+        "z_sigma_threshold": 5.0,
+        "true_positives": 200,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 300,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1_score": 0.5714,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.6,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.0,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 600.0
+      },
+      {
+        "z_sigma_threshold": 7.0,
+        "true_positives": 200,
+        "true_negatives": 1000,
+        "false_positives": 0,
+        "false_negatives": 300,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1_score": 0.5714,
+        "false_positive_rate": 0.0,
+        "false_negative_rate": 0.6,
+        "nominal_fp_rate_1000": 0.0,
+        "borderline_creep_recall": 0.0,
+        "extreme_defect_recall": 1.0,
+        "short_recall": 1.0,
+        "false_rejects_per_1000": 0.0,
+        "missed_defects_per_1000": 600.0
+      }
+    ],
+    "note": "Sweeps the lot-relative |z| safety-net gate (2\u03c3\u20137\u03c3). This isolates ONLY the raw |z| gate in isolation for analytical insight. Key finding: at low \u03c3 the gate is noisy (nominal FP rises), and at high \u03c3 (e.g. 7\u03c3) it MISSES borderline latent creep just above the 3\u03c3 dynamic gate (11.5\u201314\u00b5A) while still catching extreme defects (30\u201348\u00b5A). This is why the production system is a CASCADE - IF + criticality gate carry the sub-outlier screening, and the 7\u03c3 z-net is purely a belt-and-suspenders catastrophic backstop. The full pipeline (A+C+B) achieves the 100% recall reported in Phase 1, and this table explains why no single |z| threshold could do that alone."
+  },
+  "unclamped_nominal_benchmark": {
+    "description": "Two-mode unclamped honesty check. Mode A (iid): one CUSUM fed independent lot-population draws \u2014 measures the historical global-reference artifact. Mode B (per-DUT): realistic streams, each part auto-baselined to its own first 15 readings, baseline ~N(10, 1.17) \u00b5A unclamped, sensor noise 0.2 \u00b5A.",
+    "n_samples": 3000,
+    "lot_mean_ua": 9.882693,
+    "lot_std_ua": 1.1512813460449187,
+    "dynamic_gate_ua": 13.337,
+    "natural_dynamic_gate_crossings": 5,
+    "natural_dynamic_gate_crossing_rate": 0.00167,
+    "module_a_false_positive_rate": 0.00067,
+    "mode_a_iid_cusum_flag_rate": 0.91967,
+    "mode_a_note": "Artifact mode: lot spread fed to a single global-reference CUSUM as if it were one DUT's time series \u2014 accumulation is expected and motivated the per-DUT auto-baseline fix.",
+    "mode_b_per_part_false_trip_rate": 0.0,
+    "mode_b_parts_tested": 60,
+    "mode_b_ticks_per_part": 40,
+    "conclusion": "Module A FP rate 0.067% on the unclamped lot. Mode A confirms the global-reference artifact; Mode B shows the shipped per-DUT auto-baseline CUSUM false-trips on 0/60 healthy unclamped parts."
+  }
+}

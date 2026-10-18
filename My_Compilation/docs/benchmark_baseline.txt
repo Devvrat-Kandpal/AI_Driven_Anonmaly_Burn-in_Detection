@@ -1,0 +1,69 @@
+﻿==========================================================================
+  PROJECT ARJUNA (SIH 26170): COMPREHENSIVE AEROSPACE BENCHMARK SUITE    
+  Designed with reference to ECSS-Q-ST-60-02C principles & MIL-STD-883 screening horizon        
+==========================================================================
+
+[Phase 1/5] Benchmarking Unseen Randomized Fault Datasets (Defect Recall)...
+  -> Total Samples Evaluated: 7,500
+  -> True Positives (TP):     2,456
+  -> False Negatives (FN):    0 (Missed Defects)
+  -> Defect Recall:           100.00% (Target: >99.5%)
+  -> Precision:               93.21%
+  -> F1-Score:                0.9648
+  -> ROC-AUC Score:           0.9985
+  -> Inference Latency:       2.3165 ms/tick
+
+[Phase 2/5] Evaluating Drift Predictor vs 168h Ground Truth Telemetry...
+
+[Phase 2a/HONEST] Module B forecast vs REAL 168h trajectory (non-circular):
+  -> True endpoint (telemetry): 150.0 uA @ 168.0 h
+  -> observe    12h: forecast 106.31 uA | true 150.00 uA | err  -43.69 uA
+  -> observe    24h: forecast 105.90 uA | true 150.00 uA | err  -44.10 uA
+  -> observe    48h: forecast 114.05 uA | true 150.00 uA | err  -35.95 uA
+  -> observe    96h: forecast 134.34 uA | true 150.00 uA | err  -15.66 uA
+  -> observe   120h: forecast 145.02 uA | true 150.00 uA | err   -4.98 uA
+  -> observe   144h: forecast 156.00 uA | true 150.00 uA | err   +6.00 uA
+  -> HONEST overall MAE: 25.062 uA | RMSE: 30.143 uA
+
+[Phase 2b/LEGACY] Synthetic linear-GT benchmark (historical, circular -- retained for comparison only):
+  -> Mean Absolute Error (MAE): 0.567 uA  [circular]
+  -> Root Mean Squared Error:   0.803 uA  [circular]
+  -> 95% Prediction Interval:   [-1.742 uA, 0.778 uA]  [circular]
+  -> Avg Chamber Time Saved:    165.6 hours (98.6%)  [circular]
+
+[Phase 3/5] Generating Multi-Model Ablation Study...
+  -> ISOLATION_FOREST_ONLY: Effective for high-dimensional shorts, but completely misses slow gradual thermal degradation early on.
+  -> CUSUM_ONLY: Superb for cumulative creep detection, but lacks multi-dimensional voltage/current correlation capability.
+  -> COMBINED_SYSTEM: 100% recall across both instantaneous multivariate collapses and latent time-series creep.
+
+[Phase 4/5] Out-of-Distribution / Non-Linear Generalization (OOD)...
+  -> power_law    OLS MAE 1.392 uA | CUSUM detect 1.000
+  -> exponential  OLS MAE 5.758 uA | CUSUM detect 0.417
+  -> logarithmic  OLS MAE 4.545 uA | CUSUM detect 1.000
+  -> piecewise    OLS MAE 9.354 uA | CUSUM detect 0.033
+  -> parameter-shifted lot (14uA/2.5uA): Module A anomaly rate 0.547
+
+[Phase 5/5] Threshold Sensitivity Analysis (|z| gate 2.0-7.0 sigma)...
+  -> 2.0 sigma: Recall 0.820 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 180.0
+  -> 2.5 sigma: Recall 0.670 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 330.0
+  -> 3.0 sigma: Recall 0.552 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 448.0
+  -> 3.5 sigma: Recall 0.422 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 578.0
+  -> 4.0 sigma: Recall 0.400 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 600.0
+  -> 5.0 sigma: Recall 0.400 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 600.0
+  -> 7.0 sigma: Recall 0.400 | FPR 0.0000 | FP/1000 0.0 | Missed/1000 600.0
+
+[Phase 6/6] Unclamped Nominal FP Honesty Check (H1)...
+  -> 3╧â gate crossings (natural): 5/3000 (0.167%)
+  -> Module A FP rate (unclamped): 0.067%
+  -> Mode A (iid global-ref artifact) CUSUM flag rate: 92.0%
+  -> Mode B (per-DUT auto-baseline) false trips: 0.0% (0/60 parts)
+
+[Honesty Breakdown] Per-segment metrics (post label-bias ground truth):
+  -> Instantaneous outlier recall: 1.0
+  -> Creep recall:                 1.0
+  -> Creep detection latency:      103.9 ticks (max 199)
+  -> Short-circuit recall:         1.0
+  -> Nominal FP rate:              0.0328
+
+[SUCCESS] Full quantitative benchmark saved to: C:\Users\Mehul Kumar\OneDrive\Desktop\SIH_26170-main\My_Compilation\reports\evaluation_report.json
+[SUCCESS] Markdown summary saved to: C:\Users\Mehul Kumar\OneDrive\Desktop\SIH_26170-main\My_Compilation\reports\ablation_study.md

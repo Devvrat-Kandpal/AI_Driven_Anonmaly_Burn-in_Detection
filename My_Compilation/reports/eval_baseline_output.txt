@@ -1,0 +1,30 @@
+﻿HISTORICAL SNAPSHOT - superseded. Current canonical console log: reports/eval_final_output.txt (and JSON metrics in reports/evaluation_report.json). Values below are from an earlier phase and are NOT current.
+
+==========================================================================
+  PROJECT ARJUNA (SIH 26170): COMPREHENSIVE AEROSPACE BENCHMARK SUITE    
+  Conforming to ECSS-Q-ST-60-02C & MIL-STD-883 Space Qualification        
+==========================================================================
+
+[Phase 1/3] Benchmarking Unseen Randomized Fault Datasets (Defect Recall)...
+  -> Total Samples Evaluated: 7,500
+  -> True Positives (TP):     2,443
+  -> False Negatives (FN):    0 (Missed Defects)
+  -> Defect Recall:           100.00% (Target: >99.5%)
+  -> Precision:               99.71%
+  -> F1-Score:                0.9986
+  -> ROC-AUC Score:           0.9994
+  -> Inference Latency:       4.0566 ms/tick
+
+[Phase 2/3] Evaluating Drift Predictor vs 168h Ground Truth Telemetry...
+  -> Mean Absolute Error (MAE): 0.583 uA
+  -> Root Mean Squared Error:   0.825 uA
+  -> 95% Prediction Interval:   [-1.789 uA, 0.797 uA]
+  -> Avg Chamber Time Saved:    164.4 hours (97.9%)
+
+[Phase 3/3] Generating Multi-Model Ablation Study...
+  -> ISOLATION_FOREST_ONLY: Effective for high-dimensional shorts, but completely misses slow gradual thermal degradation early on.
+  -> CUSUM_ONLY: Superb for cumulative creep detection, but lacks multi-dimensional voltage/current correlation capability.
+  -> COMBINED_SYSTEM: 100% recall across both instantaneous multivariate collapses and latent time-series creep.
+
+[SUCCESS] Full quantitative benchmark saved to: C:\Users\Mehul Kumar\OneDrive\Desktop\SIH-2026\My_Compilation\reports\evaluation_report.json
+[SUCCESS] Markdown summary saved to: C:\Users\Mehul Kumar\OneDrive\Desktop\SIH-2026\My_Compilation\reports\ablation_study.md

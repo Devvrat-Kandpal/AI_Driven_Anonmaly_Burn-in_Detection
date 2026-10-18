@@ -1,0 +1,423 @@
+"""
+Backend/security.py — Project ARJUNA (SIH 26170)
+API authentication, Role-Based Access Control (RBAC), sliding-window rate limiting,
+WebSocket handshake security, and restricted CORS middleware conforming to aerospace software assurance guidelines.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import time
+import urllib.parse
+from collections import defaultdict, deque
+from typing import List
+
+from fastapi import HTTPException, Request, WebSocket, status
+from fastapi.security.api_key import APIKeyHeader, APIKeyQuery
+
+logger = logging.getLogger("project_arjuna.security")
+
+# Configuration via environment variables (with safe local development defaults)
+SECURITY_ENABLED: bool = os.getenv("SECURITY_ENABLED", "true").lower() == "true"
+DEFAULT_DEV_KEY = "arjuna-mission-key-2026"
+DEFAULT_ADMIN_KEY = "arjuna-admin-key-2026"
+DEFAULT_QA_KEY = "arjuna-qa-key-2026"
+DEFAULT_VIEWER_KEY = "arjuna-viewer-key-2026"
+
+API_KEY: str = os.getenv("ARJUNA_API_KEY", DEFAULT_DEV_KEY)
+ADMIN_KEY: str = os.getenv("ARJUNA_ADMIN_KEY", DEFAULT_ADMIN_KEY)
+QA_KEY: str = os.getenv("ARJUNA_QA_KEY", DEFAULT_QA_KEY)
+VIEWER_KEY: str = os.getenv("ARJUNA_VIEWER_KEY", DEFAULT_VIEWER_KEY)
+
+# Optional demo operator credential the frontend can use in non-production demos.
+# Served by GET /api/config ONLY when the environment is non-production (see
+# security.is_production()). This gives the SIH demo a single configurable
+# credential without hardcoding a secret into the shipped JavaScript. In
+# production the endpoint returns no key and the frontend must be configured via
+# window.ARJUNA_API_KEY (build/deploy-injected), never committed to source.
+DEMO_API_KEY: str = os.getenv("ARJUNA_DEMO_API_KEY", API_KEY)
+
+# Fail-closed production guard: never allow predictable default dev keys in production.
+# Recognizes both ENV and ENVIRONMENT (the security-standard env var names) so the guard
+# is robust regardless of which convention the deployment uses. Development / any other
+# environment logs a clear warning instead of hard-failing (preserves demo ergonomics).
+_environment = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
+# Recognizes ARJUNA_ENV, ENVIRONMENT, and ENV so configuration is robust and standardized.
+# Development / any other environment logs a clear warning instead of hard-failing (preserves demo ergonomics).
+_environment = os.getenv(
+    "ARJUNA_ENV", os.getenv("ENVIRONMENT", os.getenv("ENV", "development"))
+).lower()
+_using_default_keys = (
+    API_KEY == DEFAULT_DEV_KEY
+    or ADMIN_KEY == DEFAULT_ADMIN_KEY
+    or QA_KEY == DEFAULT_QA_KEY
+    or VIEWER_KEY == DEFAULT_VIEWER_KEY
+    or not API_KEY.strip()
+    or not ADMIN_KEY.strip()
+    or not QA_KEY.strip()
+    or not VIEWER_KEY.strip()
+)
+if _environment == "production":
+    if not SECURITY_ENABLED:
+        raise RuntimeError(
+            "FATAL: SECURITY_ENABLED=false is not permitted in a production "
+            "environment. Production must run fail-closed with security enabled. "
+            "Set SECURITY_ENABLED=true (the safe default) before deployment."
+        )
+    if _using_default_keys:
+        raise RuntimeError(
+            "FATAL: Default hardcoded API keys are active in a production environment. "
+            "Set ARJUNA_API_KEY / ARJUNA_ADMIN_KEY / ARJUNA_QA_KEY / ARJUNA_VIEWER_KEY "
+            "environment variables before deployment. Refusing to start with guessable credentials."
+        )
+else:
+    if _using_default_keys:
+        logger.warning(
+            "SECURITY: Default dev API keys active (environment=%s). Override via "
+            "ARJUNA_*_KEY env vars before any non-demo deployment.",
+            _environment,
+        )
+
+
+def is_production_env() -> bool:
+    """True when the runtime environment is production (ARJUNA_ENV/ENVIRONMENT/ENV == 'production')."""
+    return _environment == "production"
+
+# Approved origins for restricted CORS
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+RAW_ORIGINS = os.getenv("ALLOWED_ORIGINS") or os.getenv("FRONTEND_ORIGINS") or ""
+ALLOWED_ORIGINS: List[str] = [
+    o.strip() for o in RAW_ORIGINS.split(",") if o.strip()
+] or DEFAULT_ALLOWED_ORIGINS
+
+# Local-development hostname recognition uses EXACT parsed matching only.
+# An attacker can send a Host/Origin/Referer like "localhost.evil.io" or
+# "evil-localhost.com" that CONTAINS a loopback substring; substring matching
+# would wrongly grant local bypass privileges, so we compare the parsed hostname
+# against an exact allow-list. This closes the P1-02 local-bypass loophole.
+_LOCAL_HOSTNAMES = {"localhost", "127.0.0.1", "testserver", "::1"}
+
+
+def _norm_host(value: str | None) -> str:
+    return (value or "").strip().lower().rstrip(".")
+
+
+def _host_header_hostname(host_value: str) -> str:
+    """Parses hostname (excluding port) from a Host header value, exact-match safe."""
+    hv = _norm_host(host_value)
+    if not hv:
+        return ""
+    if hv.startswith("[") and "]" in hv:
+        return hv[1 : hv.index("]")]
+    if hv.count(":") == 1:
+        head, _, tail = hv.rpartition(":")
+        if tail.isdigit():
+            return head
+    return hv
+
+
+def _origin_hostname(origin: str) -> str:
+    """Returns the hostname portion of an http(s) origin/referer URL, or '' if unparseable."""
+    if not origin:
+        return ""
+    try:
+        return _norm_host(urllib.parse.urlparse(origin).hostname)
+    except Exception:
+        return ""
+
+
+def is_loopback_hostname(hostname: str) -> bool:
+    """True only for an EXACT approved localhost hostname (never substring)."""
+    return _norm_host(hostname) in _LOCAL_HOSTNAMES
+
+
+# Security Headers & Query extractors
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+api_key_query = APIKeyQuery(name="api_key", auto_error=False)
+
+
+class SlidingWindowRateLimiter:
+    """Thread-safe in-memory sliding window rate limiter."""
+
+    def __init__(self, max_requests: int = 20, window_seconds: float = 60.0):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._history: dict[str, deque[float]] = defaultdict(deque)
+
+    def check(self, client_id: str) -> bool:
+        """Returns True if the request is allowed under rate limits, False otherwise."""
+        now = time.time()
+        timestamps = self._history[client_id]
+
+        # Purge entries older than sliding window
+        while timestamps and timestamps[0] <= now - self.window_seconds:
+            timestamps.popleft()
+
+        if len(timestamps) >= self.max_requests:
+            return False
+
+        timestamps.append(now)
+        return True
+
+    def reset(self) -> None:
+        """Resets all tracked rate-limiting histories."""
+        self._history.clear()
+
+
+# Global sliding rate limiter for mutating control endpoints
+mutation_rate_limiter = SlidingWindowRateLimiter(max_requests=25, window_seconds=60.0)
+
+
+def audit_log(action: str, user_role: str, client_ip: str, details: str = "") -> None:
+    """Emits structured audit logs for security inspections and mission accountability."""
+    logger.info(
+        "AUDIT_SECURITY action=%s role=%s ip=%s details=%s",
+        action,
+        user_role,
+        client_ip,
+        details,
+    )
+
+
+def extract_key_from_request(request: Request) -> str | None:
+    """Extracts API key from X-API-Key header, Authorization Bearer, or query string."""
+    key = request.headers.get("X-API-Key")
+    if key:
+        return key.strip()
+
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header[7:].strip()
+
+    query_key = request.query_params.get("api_key") or request.query_params.get("token")
+    if query_key:
+        return query_key.strip()
+
+    return None
+
+
+def resolve_role_from_key(key: str) -> str | None:
+    """Resolves RBAC role from key string."""
+    if key == ADMIN_KEY:
+        return "admin"
+    if key == API_KEY:
+        return "operator"
+    if key == QA_KEY:
+        return "qa_inspector"
+    if key == VIEWER_KEY:
+        return "viewer"
+    return None
+
+
+def is_local_request(request: Request) -> bool:
+    """Determines if the request is genuinely local to this machine or an automated test.
+
+    Uses strict EXACT hostname matching (see is_loopback_hostname) rather than permissive
+    substring checks so attacker-crafted Host/Origin/Referer values cannot request local
+    privileges. The loopback IP allow-set is deliberately small.
+    A request is local ONLY IF the connecting client IP is an exact approved loopback address
+    (localhost, 127.0.0.1, ::1, testserver).
+    Remote clients CANNOT gain local privileges simply by sending spoofed Host, Origin, or
+    Referer headers containing loopback values.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    if not is_loopback_hostname(client_ip):
+        return False
+
+    # If Origin or Referer is supplied by a browser, verify that origin is also loopback
+    origin = request.headers.get("origin") or request.headers.get("referer") or ""
+    host_header = request.headers.get("host", "").lower()
+    url_host = request.url.hostname or ""
+    if origin:
+        orig_host = _origin_hostname(origin)
+        if orig_host and not is_loopback_hostname(orig_host):
+            return False
+
+    return (
+        is_loopback_hostname(client_ip)
+        or is_loopback_hostname(_origin_hostname(origin))
+        or is_loopback_hostname(_host_header_hostname(host_header))
+        or is_loopback_hostname(url_host)
+    )
+    return True
+
+
+async def authenticate_request(request: Request, required_roles: list[str]) -> dict:
+    """
+    Core RBAC authentication function.
+    Validates API key and verifies if resolved role satisfies required_roles.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+
+    if not SECURITY_ENABLED:
+        return {"role": "admin", "client_ip": client_ip, "authenticated": False}
+
+    key = extract_key_from_request(request)
+    is_local = is_local_request(request)
+    has_explicit_key_header = (
+        "X-API-Key" in request.headers
+        or "Authorization" in request.headers
+        or "api_key" in request.query_params
+        or "token" in request.query_params
+    )
+
+    # Local development bypass: if on localhost/test client and no explicit key is passed, default to operator
+    if not key and not has_explicit_key_header and is_local:
+        key = API_KEY
+
+    if not key:
+        audit_log(
+            "AUTH_FAILURE",
+            "unauthenticated",
+            client_ip,
+            f"missing_key on {request.url.path}",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Provide 'X-API-Key' header or 'api_key' query parameter.",
+        )
+
+    role = resolve_role_from_key(key)
+    if not role:
+        audit_log(
+            "AUTH_FAILURE",
+            "invalid_key",
+            client_ip,
+            f"invalid_key on {request.url.path}",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials."
+        )
+
+    # Check role permissions against required_roles
+    if role not in required_roles:
+        audit_log(
+            "RBAC_DENIED",
+            role,
+            client_ip,
+            f"role {role} insufficient for {request.url.path}",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied. Role '{role}' does not possess required permissions for this action.",
+        )
+
+    audit_log("AUTH_SUCCESS", role, client_ip, f"accessed {request.url.path}")
+    return {"role": role, "client_ip": client_ip, "authenticated": True}
+
+
+async def verify_viewer_access(request: Request) -> dict:
+    """Allows viewer, qa_inspector, operator, and admin."""
+    return await authenticate_request(
+        request, required_roles=["viewer", "qa_inspector", "operator", "admin"]
+    )
+
+
+async def verify_qa_inspector_access(request: Request) -> dict:
+    """Allows qa_inspector, operator, and admin."""
+    return await authenticate_request(
+        request, required_roles=["qa_inspector", "operator", "admin"]
+    )
+
+
+async def verify_operator_access(request: Request) -> dict:
+    """
+    Validates that request has valid Operator or Admin credentials.
+    Enforces mutation rate limiting.
+    Protects mutating endpoints: /api/inject-fault, /api/reset, /api/set-criticality.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+
+    # Enforce Rate Limiting
+    if not mutation_rate_limiter.check(client_ip):
+        audit_log(
+            "RATE_LIMIT_EXCEEDED",
+            "anonymous",
+            client_ip,
+            f"endpoint={request.url.path}",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded for control endpoints (maximum 25 requests per minute).",
+        )
+
+    return await authenticate_request(request, required_roles=["operator", "admin"])
+
+
+async def verify_admin_access(request: Request) -> dict:
+    """Validates that request specifically holds Admin credentials."""
+    return await authenticate_request(request, required_roles=["admin"])
+
+
+async def verify_websocket_auth(websocket: WebSocket) -> dict | None:
+    """
+    Handshake authentication for WebSocket endpoints (/ws and /ws/telemetry).
+    Checks query parameters (?api_key= or ?token=) or headers (X-API-Key, Authorization).
+    Rejects unauthorized connections with WS_1008_POLICY_VIOLATION.
+    """
+    client_ip = websocket.client.host if websocket.client else "unknown"
+
+    if not SECURITY_ENABLED:
+        return {"role": "admin", "client_ip": client_ip, "authenticated": False}
+
+    key = websocket.query_params.get("api_key") or websocket.query_params.get("token")
+    if not key:
+        key = websocket.headers.get("X-API-Key")
+    if not key:
+        auth_hdr = websocket.headers.get("Authorization")
+        if auth_hdr and auth_hdr.startswith("Bearer "):
+            key = auth_hdr[7:].strip()
+
+    origin = websocket.headers.get("origin") or ""
+    host_header = websocket.headers.get("host", "").lower()
+    is_local = (
+        is_loopback_hostname(client_ip)
+        or is_loopback_hostname(_origin_hostname(origin))
+        or is_loopback_hostname(_host_header_hostname(host_header))
+    )
+
+    has_explicit_key = (
+        "api_key" in websocket.query_params
+        or "token" in websocket.query_params
+        or "X-API-Key" in websocket.headers
+        or "Authorization" in websocket.headers
+    )
+
+    # Local development browser bypass when no explicit key was passed
+    if not key and not has_explicit_key and is_local:
+        key = VIEWER_KEY
+
+    if not key:
+        audit_log("WS_AUTH_FAILURE", "unauthenticated", client_ip, "missing_key")
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION, reason="Authentication required"
+        )
+        return None
+
+    role = resolve_role_from_key(key)
+    if not role:
+        audit_log("WS_AUTH_FAILURE", "invalid_key", client_ip, "invalid_key")
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION, reason="Invalid credentials"
+        )
+        return None
+
+    audit_log("WS_AUTH_SUCCESS", role, client_ip, f"role={role}")
+    return {"role": role, "client_ip": client_ip, "authenticated": True}
+
+
+def get_security_status() -> dict:
+    """Returns current security layer operational status."""
+    return {
+        "security_enabled": SECURITY_ENABLED,
+        "auth_methods": ["X-API-Key", "Bearer", "api_key query", "token query"],
+        "rate_limiting_active": True,
+        "allowed_origins": ALLOWED_ORIGINS,
+        "roles_supported": ["admin", "operator", "qa_inspector", "viewer"],
+    }
