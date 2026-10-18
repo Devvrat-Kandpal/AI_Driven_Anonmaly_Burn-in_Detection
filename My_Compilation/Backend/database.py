@@ -1,5 +1,5 @@
 """
-Backend/database.py — Project ARJUNA (SIH 26170)
+
 High-reliability persistence adapter supporting production Supabase PostgreSQL
 and resilient offline in-memory fallback queues per ECSS-Q-ST-60-02C.
 Supports both direct PostgREST HTTP client (httpx/requests) and official supabase client.
