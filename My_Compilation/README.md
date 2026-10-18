@@ -1,4 +1,4 @@
-# Project ARJUNA (SIH 26170)
+
 ### Physics-Informed Semiconductor Burn-In Telemetry & Screening Prototype for ISRO
 
 [![Designed w/ reference: ECSS-Q-ST-60-02C concepts](https://img.shields.io/badge/Designed%20w%2F%20reference-ECSS--Q--ST--60--02C%20(principles)-blue.svg)](https://ecss.nl/)
@@ -11,11 +11,11 @@
 
 ## 1. Executive Summary
 
-**Project ARJUNA** is an AI-driven, physics-informed screening and telemetry *prototype* developed for the **Indian Space Research Organisation (ISRO)** application space: it screens **simulated semiconductor microcircuits** during **High-Temperature Operating Life (HTOL)** burn-in. The implementation is **designed with reference to selected concepts** from **ECSS-Q-ST-60-02C** and **MIL-STD-883 Method 1015**; it is **not** formally ECSS- or MIL-STD-certified, and its results are synthetic (no real ATE/hardware or formal compliance evidence). Note ECSS-Q-ST-60-02C has been superseded by ECSS-Q-ST-60-03C / ECSS-E-ST-20-40C; alignment here is with the *principles* of the 60-02C-era space product assurance discipline.
+**the project** is an AI-driven, physics-informed screening and telemetry *prototype* developed for the **Indian Space Research Organisation (ISRO)** application space: it screens **simulated semiconductor microcircuits** during **High-Temperature Operating Life (HTOL)** burn-in. The implementation is **designed with reference to selected concepts** from **ECSS-Q-ST-60-02C** and **MIL-STD-883 Method 1015**; it is **not** formally ECSS- or MIL-STD-certified, and its results are synthetic (no real ATE/hardware or formal compliance evidence). Note ECSS-Q-ST-60-02C has been superseded by ECSS-Q-ST-60-03C / ECSS-E-ST-20-40C; alignment here is with the *principles* of the 60-02C-era space product assurance discipline.
 
 Traditional aerospace screening tests parts against static datasheet maximums (e.g. 50 µA quiescent current). In a flight qualification lot, an outlier operating at **45.2 µA** passes traditional screening, yet has an extreme **$+30.08\sigma$** statistical deviation from the 10 µA lot baseline. In deep space, these latent flaws cause mission-ending failures.
 
-ARJUNA provides:
+it provides:
 1. **Dynamic Outlier Screening (Module A)**: Multivariate Isolation Forest + lot-relative Z-score safety net catching sub-limit latent anomalies.
 2. **168h Endpoint Latent Drift Forecasting (Module B)**: Ordinary Least Squares (OLS) drift regression predicting the 168h endpoint from early (< 24h) burn-in telemetry. **HONEST (non-circular) MAE vs the real coupled physics trajectory: 25.06 µA** (systematic under-prediction of the super-linear, clamp-limited curve); the legacy circular figure of **0.567 µA** is retained only for historical comparison and is labeled as such in the benchmark report.
 3. **Latent Creep Detection (Module C)**: Tabular Cumulative Sum (CUSUM) filter with fixed sensor noise allowance ($k=0.5$) and risk-weighted decision thresholds ($h$).
