@@ -100,7 +100,8 @@ Contributors
 
 This was developed as a team project.
 
-- Devvrat Kandpal: physics simulator, dataset schema and ground truth, detection and evaluation work
+- Devvrat Kandpal
+  
 
 Acknowledgements
 
