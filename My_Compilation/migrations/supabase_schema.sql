@@ -1,14 +1,5 @@
 -- ==============================================================================
--- PROJECT ARJUNA (SIH 26170): PRODUCTION SUPABASE DATABASE SCHEMA
 -- ECSS-Q-ST-60-02C Space Product Assurance Telemetry & Event Persistence
--- ==============================================================================
--- INSTRUCTIONS FOR SETUP IN SUPABASE:
--- 1. Open your Supabase Project Dashboard (https://supabase.com/dashboard)
--- 2. Click on the "SQL Editor" icon (>_) in the left navigation sidebar.
--- 3. Click "New query", paste the entire content of this script, and click "Run".
--- 4. Verify tables "telemetry_logs" and "system_events" appear under Table Editor.
--- ==============================================================================
-
 -- 1. TELEMETRY LOGS TABLE
 -- Stores individual high-frequency burn-in chamber telemetry frames
 CREATE TABLE IF NOT EXISTS public.telemetry_logs (
