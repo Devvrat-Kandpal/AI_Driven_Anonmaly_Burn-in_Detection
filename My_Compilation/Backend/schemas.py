@@ -1,5 +1,5 @@
 """
-Backend/schemas.py — Project ARJUNA (SIH 26170)
+
 Unified Pydantic data contracts for real-time telemetry, structured explainability (XAI),
 system control requests, and operational status views conforming to ECSS-Q-ST-60-02C.
 """
